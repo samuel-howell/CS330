@@ -3,6 +3,8 @@ Samuel Howell
 CS330
 Project 5
 
+
+Note: you need to install pkgs from the cmd line outside of the vs code application
 '''
 
 from Robot import Robot
@@ -12,7 +14,7 @@ import time
 
 byteList = []
 flag = False
-robot = Robot('COM6')
+robot = Robot('COM3')
 direction = "n"
 
 #! MAKE SURE THE CORD IS PLUGGED ALL THE WAY IN
@@ -24,7 +26,9 @@ def initRobot():
     robot.safe()
     time.sleep(1)
     print("ready to run")
+    robot.clearBuffer()
 
+ 
 
 initRobot()
 
@@ -61,24 +65,31 @@ while(flag == True):
     currentByte = int(str(byteList[len(byteList)-1]).lstrip('[').rstrip(']')) # this takes "[x]" and makes is "x" so it can be converted to an int.
     print("current: " + str(currentByte))
     
-    prop = robot.pController(currentByte)
+    error = 150 - currentByte # desired distance - actual distance
+    ref = 40
+    prop = robot.pController(error)
 
+    print("prop: ", str(prop), "   error: " + str(error), "   distance: ", str(currentByte))
+    
 
+    # wait for serial comm to stop sending before you run program again
     # current byte is measurement from the wall. we want to keep it at around 40
 
-    if(currentByte > 150):
+    if (currentByte > 150):
         currentByte = 150
-    if (currentByte < 40): # move closer to the wall, turning right #!can change 10 to 0 for even tighter turns if necessary depending on complexity of the obstacle
-        robot.driveDirect(0, 10 + prop, 0, 70)
+    if (currentByte == 0): # ifthe robot is too far away from the wall, set current byte to ref - 1 to send the robot right.
+        currentByte == ref - 1
+    if (currentByte < ref): # move closer to the wall, turning right #!can change 10 to 0 for even tighter turns if necessary depending on complexity of the obstacle
+        robot.driveDirect(0, 50 - prop, 0, 50 + prop)
         print("R")
-    if (currentByte > 40): # move away from the wall, turning left
-        robot.driveDirect(0, 70, 0, 10 + prop)
+    if (currentByte > ref): # move away from the wall, turning left
+        robot.driveDirect(0, 50 + prop, 0, 50 - prop)
         print("L")
-    if (currentByte == 40): # go straight
+    if (currentByte == ref): # go straight
         robot.driveDirect(0, 70, 0, 70)
 
     
-    # check for a bump
+    #check for a bump
     robot.sendCommand(b'\x8E\x07') # bump detected
     readList = robot.read(1)
     bumpDetected =(int(readList[0], 2) & 1 == 1 or int(readList[0], 2) & 2 == 2)
